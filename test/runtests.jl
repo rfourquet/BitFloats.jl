@@ -1,5 +1,6 @@
 using BitFloats, Test
-using BitFloats: UInt80
+using BitFloats: UInt80, explicit_bit, exponent_half, exponent_mask, exponent_one, sign_mask,
+                 significand_mask, uinttype
 
 @testset "definitions" begin
     @test @isdefined Float80
@@ -14,4 +15,28 @@ using BitFloats: UInt80
     @test isprimitivetype(Float80)
     @test isprimitivetype(UInt80)
     @test isprimitivetype(Float128)
+    @test uinttype(Float80)  == UInt80
+    @test uinttype(Float128) == UInt128
+end
+
+@testset "traits" begin
+    @test explicit_bit() == explicit_bit(Float80) isa UInt80
+    for T in (Float80, Float128)
+        for ufun ∈ (sign_mask, exponent_mask, exponent_one, significand_mask)
+            @test ufun(T) isa uinttype(T)
+        end
+        for ffun ∈ (eps, floatmin, floatmax)
+            @test ffun(T) isa T
+        end
+        r = rand(uinttype(T))
+        s = r & significand_mask(T)
+        if T === Float80
+            s |= explicit_bit(T)
+        end
+        e = r & exponent_mask(T)
+        # TODO: sanitize e
+        x = r & sign_mask(T) | e | s
+        # @test floatmin(T) <= x <= floatmax(T)
+        # @test nextfloat(T(1)) - T(1) == eps(T)
+    end
 end
