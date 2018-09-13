@@ -5,8 +5,8 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin, precision,
-             sign_mask, significand_mask, typemax, typemin, uinttype
+import Base: *, +, -, /, eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
+             precision, rem, sign_mask, significand_mask, typemax, typemin, uinttype
 
 import BitIntegers
 
@@ -22,6 +22,8 @@ BitIntegers.@define_integers 80
 
 uinttype(::Type{Float80}) = UInt80
 uinttype(::Type{Float128}) = UInt128
+
+const llvmvars = ((Float80, "x86_fp80", "i80", "f80"), (Float128, "fp128", "i128", "f128"))
 
 
 # * traits
@@ -65,6 +67,23 @@ const NaN128 = reinterpret(Float128, 0xffff_8000_0000_0000_0000_0000_0000_0000)
 
 precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
+
+
+# * arithmetic
+
+for (T, f, i) = llvmvars
+    for (op, fop) = ((:*, :fmul), (:/, :fdiv), (:+, :fadd), (:-, :fsub), (:rem, :frem))
+        @eval $op(x::$T, y::$T) = Base.llvmcall(
+            $"""
+            %x = bitcast $i %0 to $f
+            %y = bitcast $i %1 to $f
+            %m = $fop $f %x, %y
+            %mi = bitcast $f %m to $i
+            ret $i %mi
+            """,
+            $T, Tuple{$T,$T}, x, y)
+    end
+end
 
 
 end # module
