@@ -15,6 +15,9 @@ using Core: BuiltinInts
 
 import BitIntegers
 
+import Random: rand
+using  Random: AbstractRNG, CloseOpen01, CloseOpen12, SamplerTrivial
+
 
 # * definitions
 
@@ -125,6 +128,18 @@ for (F, f, i) = llvmvars
             $F, Tuple{$F,$F}, x, y)
     end
 end
+
+
+# * rand
+
+rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen12{Float80}}) =
+    reinterpret(Float80, rand(rng, UInt64) | exponent_one(Float80) | explicit_bit())
+
+rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen12{Float128}}) =
+    reinterpret(Float128, rand(rng, UInt128) & significand_mask(Float128) | exponent_one(Float128))
+
+rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen01{T}}) where {T<:WBF} =
+    rand(rng, CloseOpen12(T)) - one(T)
 
 
 end # module

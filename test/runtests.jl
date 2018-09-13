@@ -74,12 +74,29 @@ end
 
 @testset "arithmetic" begin
     for T = (Float80, Float128)
-        a, b = _rand(T), _rand(T)
         n = rand(Int)
         for op = (*, /, +, -, rem)
-            r = op(a, b)
-            @test r isa T
-            @test op(a, n) isa T
+            for randfun = (_rand, rand)
+                a, b = randfun(T), randfun(T)
+                r = op(a, b)
+                @test r isa T
+                @test op(a, n) isa T
+            end
         end
+    end
+end
+
+@testset "rand" begin
+    for T = (Float80, Float128)
+        x = rand(T)
+        @test x isa T
+        u = reinterpret(uinttype(T), x)
+        @test u & sign_mask(T) == 0
+        u2 = reinterpret(uinttype(T), (rand(T) + one(T)))
+        u2 &= exponent_mask(T)
+        if T == Float80
+            u2 |= explicit_bit(T)
+        end
+        @test u2 == exponent_one(T)
     end
 end
