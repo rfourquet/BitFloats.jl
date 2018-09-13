@@ -87,6 +87,9 @@ end
                 @test op(a, n) isa T
             end
         end
+        x = _rand(T)
+        @test -x  isa T
+        @test -(-x) == x
     end
 end
 

@@ -161,6 +161,8 @@ for (F, f, i) = llvmvars
     end
 end
 
+-(x::F) where {F<:WBF} = F(-0.0) - x
+
 
 # * rand
 
