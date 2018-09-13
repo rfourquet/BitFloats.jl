@@ -6,8 +6,8 @@ export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
 import Base: *, +, -, /, eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
-             precision, promote_rule, reinterpret, rem, sign_mask, significand_mask, typemax,
-             typemin, uinttype, unsafe_trunc
+             precision, promote_rule, reinterpret, rem, round, sign_mask, significand_mask,
+             typemax, typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -149,6 +149,25 @@ for (F, f, i) = llvmvars
         (::Type{$F})(x::Float16) = $F(Float32(x))
         (::Type{Float16})(x::$F) = Float16(Float32(x))
         promote_rule(::Type{$F}, ::Type{Float16}) = $F
+    end
+end
+
+
+# ** round
+
+for (F, f, i, fn) = llvmvars
+    # TODO: can be broken for Float128
+    for (mode, llvmfun) = ((:ToZero, :trunc), (:Down, :floor),
+                           (:Up, :ceil), (:Nearest, :rint))
+        fun = "@llvm.$llvmfun.$fn"
+        @eval round(x::$F, r::$(RoundingMode{mode})) = Base.llvmcall(
+            ($"""declare $f $fun($f %Val)""",
+             $"""
+             %x = bitcast $i %0 to $f
+             %y = call $f $fun($f %x)
+             %z = bitcast $f %y to $i
+             ret $i %z
+             """), $F, Tuple{$F}, x)
     end
 end
 

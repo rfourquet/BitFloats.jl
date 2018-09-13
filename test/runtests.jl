@@ -79,6 +79,19 @@ end
     end
 end
 
+@testset "round" begin
+    for F = (Float80,) # broken for Float128
+        @test round(F(1.2), RoundToZero) == F(1.0)
+        @test round(F(1.2), RoundNearest) == F(1.0)
+        @test round(F(1.2), RoundDown) == F(1.0)
+        @test round(F(1.2), RoundUp) == F(2.0)
+        @test round(F(1.8), RoundToZero) == F(1.0)
+        @test round(F(1.8), RoundNearest) == F(2.0)
+        @test round(F(1.8), RoundDown) == F(1.0)
+        @test round(F(1.8), RoundUp) == F(2.0)
+    end
+end
+
 @testset "arithmetic" begin
     for T = (Float80, Float128)
         n = rand(Int)
