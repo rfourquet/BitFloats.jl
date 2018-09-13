@@ -6,8 +6,8 @@ export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
 import Base: *, +, -, /, eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
-             precision, promote_rule, rem, sign_mask, significand_mask, typemax, typemin,
-             uinttype, unsafe_trunc
+             precision, promote_rule, reinterpret, rem, sign_mask, significand_mask, typemax,
+             typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -78,6 +78,14 @@ precision(::Type{Float128}) = 113
 
 
 # * conversions
+
+# ** signedness
+
+reinterpret(::Type{Unsigned}, x::Float80)  = reinterpret(UInt80, x)
+reinterpret(::Type{Unsigned}, x::Float128) = reinterpret(UInt128, x)
+reinterpret(::Type{Signed},   x::Float80)  = reinterpret(Int80, x)
+reinterpret(::Type{Signed},   x::Float128) = reinterpret(Int128, x)
+
 
 # ** from ints
 

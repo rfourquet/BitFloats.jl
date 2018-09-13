@@ -1,6 +1,6 @@
 using BitFloats, Test
 
-using BitFloats: BuiltinInts, UInt80, explicit_bit, exponent_half, exponent_mask,
+using BitFloats: BuiltinInts, Int80, UInt80, explicit_bit, exponent_half, exponent_mask,
                  exponent_one, sign_mask, significand_mask, uinttype, uniontypes
 
 @testset "definitions" begin
@@ -73,6 +73,9 @@ end
         end
         @test one(F) isa F
         @test zero(F) isa F
+        x = _rand(F)
+        @test reinterpret(Unsigned, x) === reinterpret(uinttype(F), x)
+        @test reinterpret(Signed, x) === reinterpret(F == Float80 ? Int80 : Int128, x)
     end
 end
 
