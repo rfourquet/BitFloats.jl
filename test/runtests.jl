@@ -59,11 +59,15 @@ end
 
 @testset "conversions" begin
     for F = (Float80, Float128)
-        for T = uniontypes(BuiltinInts)
+        for T = (uniontypes(BuiltinInts)..., Float16, Float32, Float64)
             t = rand(T)
             @test F(t) isa F
             T == Bool && continue
-            @test unsafe_trunc(T, F(t)) isa T
+            if T <: Integer
+                @test unsafe_trunc(T, F(t)) isa T
+            else
+                @test T(F(t)) isa T
+            end
             @test promote_type(F, T) == F
             @test one(F) + one(T) isa F
         end

@@ -113,6 +113,38 @@ for (F, f, i) = llvmvars
 end
 
 
+# ** from floats
+
+for (F, f, i) = llvmvars
+    for (S, s) = ((Float32, :float), (Float64, :double))
+        @eval begin
+            (::Type{$F})(x::$S) = Base.llvmcall(
+                $"""
+                %y = fpext $s %0 to $f
+                %yi = bitcast $f %y to $i
+                ret $i %yi
+                """,
+                $F, Tuple{$S}, x)
+
+            (::Type{$S})(x::$F) = Base.llvmcall(
+                $"""
+                %x = bitcast $i %0 to $f
+                %y = fptrunc $f %x to $s
+                ret $s %y
+                """,
+                $S, Tuple{$F}, x)
+
+            promote_rule(::Type{$F}, ::Type{$S}) = $F
+        end
+    end
+    @eval begin
+        (::Type{$F})(x::Float16) = $F(Float32(x))
+        (::Type{Float16})(x::$F) = Float16(Float32(x))
+        promote_rule(::Type{$F}, ::Type{Float16}) = $F
+    end
+end
+
+
 # * arithmetic
 
 for (F, f, i) = llvmvars
