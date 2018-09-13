@@ -1,6 +1,7 @@
 using BitFloats, Test
-using BitFloats: UInt80, explicit_bit, exponent_half, exponent_mask, exponent_one, sign_mask,
-                 significand_mask, uinttype
+
+using BitFloats: BuiltinInts, UInt80, explicit_bit, exponent_half, exponent_mask,
+                 exponent_one, sign_mask, significand_mask, uinttype, uniontypes
 
 @testset "definitions" begin
     @test @isdefined Float80
@@ -56,12 +57,29 @@ end
     # @test Inf128 == typemax(Float128) == -typemin(Float128)
 end
 
+@testset "conversions" begin
+    for F = (Float80, Float128)
+        for T = uniontypes(BuiltinInts)
+            t = rand(T)
+            @test F(t) isa F
+            T == Bool && continue
+            @test unsafe_trunc(T, F(t)) isa T
+            @test promote_type(F, T) == F
+            @test one(F) + one(T) isa F
+        end
+        @test one(F) isa F
+        @test zero(F) isa F
+    end
+end
+
 @testset "arithmetic" begin
     for T = (Float80, Float128)
+        a, b = _rand(T), _rand(T)
+        n = rand(Int)
         for op = (*, /, +, -, rem)
-            a, b = _rand(T), _rand(T)
             r = op(a, b)
             @test r isa T
+            @test op(a, n) isa T
         end
     end
 end

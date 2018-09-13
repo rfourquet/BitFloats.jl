@@ -6,7 +6,12 @@ export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
 import Base: *, +, -, /, eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
-             precision, rem, sign_mask, significand_mask, typemax, typemin, uinttype
+             precision, promote_rule, rem, sign_mask, significand_mask, typemax, typemin,
+             uinttype, unsafe_trunc
+
+using Base: llvmcall, uniontypes
+
+using Core: BuiltinInts
 
 import BitIntegers
 
@@ -69,11 +74,47 @@ precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
 
 
+# * conversions
+
+# ** from ints
+
+for (F, f, i) = llvmvars
+    for T = uniontypes(BuiltinInts)
+        s = 8*sizeof(T)
+
+        # T -> F
+        itofp = T <: Signed ? :sitofp : :uitofp
+        @eval begin
+            (::Type{$F})(x::$T) = llvmcall(
+                $"""
+                %y = $itofp i$s %0 to $f
+                %mi = bitcast $f %y to $i
+                ret $i %mi
+                """,
+                $F, Tuple{$T}, x)
+
+            promote_rule(::Type{$F}, ::Type{$T}) = $F
+        end
+        T === Bool && continue
+
+        # F -> T
+        fptoi = T <: Signed ? :fptosi : :fptoui
+        @eval unsafe_trunc(::Type{$T}, x::$F) = llvmcall(
+            $"""
+            %x = bitcast $i %0 to $f
+            %y = $fptoi $f %x to i$s
+            ret i$s %y
+            """,
+            $T, Tuple{$F}, x)
+    end
+end
+
+
 # * arithmetic
 
-for (T, f, i) = llvmvars
+for (F, f, i) = llvmvars
     for (op, fop) = ((:*, :fmul), (:/, :fdiv), (:+, :fadd), (:-, :fsub), (:rem, :frem))
-        @eval $op(x::$T, y::$T) = Base.llvmcall(
+        @eval $op(x::$F, y::$F) = Base.llvmcall(
             $"""
             %x = bitcast $i %0 to $f
             %y = bitcast $i %1 to $f
@@ -81,7 +122,7 @@ for (T, f, i) = llvmvars
             %mi = bitcast $f %m to $i
             ret $i %mi
             """,
-            $T, Tuple{$T,$T}, x, y)
+            $F, Tuple{$F,$F}, x, y)
     end
 end
 
