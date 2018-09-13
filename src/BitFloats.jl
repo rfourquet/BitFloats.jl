@@ -58,13 +58,13 @@ exponent_bias(   ::Type{T}) where {T<:WBF} = Int(exponent_one(T) >> significand_
 eps(     ::Type{Float80})  = reinterpret(Float80,  0x3fc0_8000_0000_0000_0000 % UInt80)
 floatmin(::Type{Float80})  = reinterpret(Float80,  0x0001_8000_0000_0000_0000 % UInt80)
 floatmax(::Type{Float80})  = reinterpret(Float80,  0x7ffe_ffff_ffff_ffff_ffff % UInt80)
-# typemin( ::Type{Float80})  = -Inf80
+typemin( ::Type{Float80})  = -Inf80
 typemax( ::Type{Float80})  =  Inf80
 
 eps(     ::Type{Float128}) = reinterpret(Float128, 0x3f8f_0000_0000_0000_0000_0000_0000_0000)
 floatmin(::Type{Float128}) = reinterpret(Float128, 0x0001_0000_0000_0000_0000_0000_0000_0000)
 floatmax(::Type{Float128}) = reinterpret(Float128, 0x7ffe_ffff_ffff_ffff_ffff_ffff_ffff_ffff)
-# typemin( ::Type{Float128}) = -Inf128
+typemin( ::Type{Float128}) = -Inf128
 typemax( ::Type{Float128}) =  Inf128
 
 const Inf80 = reinterpret(Float80,   0x7fff_8000_0000_0000_0000 % UInt80)

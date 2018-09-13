@@ -40,7 +40,7 @@ end
         for ufun ∈ (sign_mask, exponent_mask, exponent_one, significand_mask)
             @test ufun(T) isa uinttype(T)
         end
-        for ffun ∈ (eps, floatmin, floatmax, typemax)
+        for ffun ∈ (eps, floatmin, floatmax, typemin, typemax)
             @test ffun(T) isa T
         end
         x = _rand(T)
@@ -53,8 +53,8 @@ end
     @test NaN128 isa Float128
     @test precision(Float80)  == 64
     @test precision(Float128) == 113
-    # @test Inf80  == typemax(Float80)  == -typemin(Float80)
-    # @test Inf128 == typemax(Float128) == -typemin(Float128)
+    @test Inf80  == typemax(Float80)  == -typemin(Float80)
+    @test Inf128 == typemax(Float128) == -typemin(Float128)
 end
 
 @testset "conversions" begin
