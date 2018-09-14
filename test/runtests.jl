@@ -92,6 +92,26 @@ end
     end
 end
 
+@testset "comparisons" begin
+    for F = (Float80, Float128)
+        x, y = _rand(F), _rand(F)
+        for op = (==, !=, <, <=, >, >=)
+            @test op(x, y) isa Bool
+        end
+        @test F(1) == F(1)
+        @test F(1) != F(2)
+        @test F(1) <  F(2)
+        @test F(1) <= F(2)
+        @test F(1) <= F(1)
+        @test F(2) >  F(1)
+        @test F(2) >= F(1)
+        @test F(1) >= F(1)
+        @test (x == y) == !(x != y)
+        @test !(F(1) == F(2))
+        @test !(F(1) != F(1))
+    end
+end
+
 @testset "arithmetic" begin
     for T = (Float80, Float128)
         n = rand(Int)
@@ -106,7 +126,7 @@ end
         x = _rand(T)
         @test -x  isa T
         @test -(-x) == x
-        @test x == abs(x) || x == -abs(x) # TODO: be more precise
+        @test x >= 0 ? x == abs(x) : x == -abs(x)
         @test abs(T(-1)) == T(1)
         @test abs(T(1)) == T(1)
     end

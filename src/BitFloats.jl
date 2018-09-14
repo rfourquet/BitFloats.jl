@@ -5,8 +5,8 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: *, +, -, /, abs, eps, exponent_half, exponent_mask, exponent_one, floatmax,
-             floatmin, precision, promote_rule, reinterpret, rem, round, sign_mask,
+import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent_half, exponent_mask, exponent_one,
+             floatmax, floatmin, precision, promote_rule, reinterpret, rem, round, sign_mask,
              significand_mask, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
@@ -168,6 +168,23 @@ for (F, f, i, fn) = llvmvars
              %z = bitcast $f %y to $i
              ret $i %z
              """), $F, Tuple{$F}, x)
+    end
+end
+
+
+# * comparisons
+
+for (F, f, i) = llvmvars
+    for (op, fop) = ((:(==), :oeq), (:!=, :une), (:<, :olt), (:<=, :ole))
+        @eval $op(x::$F, y::$F) = Base.llvmcall(
+            $"""
+            %x = bitcast $i %0 to $f
+            %y = bitcast $i %1 to $f
+            %b = fcmp $fop $f %x, %y
+            %c = zext i1 %b to i8
+            ret i8 %c
+            """,
+            Bool, Tuple{$F,$F}, x, y)
     end
 end
 
