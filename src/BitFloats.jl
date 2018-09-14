@@ -5,9 +5,9 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: *, +, -, /, eps, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
-             precision, promote_rule, reinterpret, rem, round, sign_mask, significand_mask,
-             typemax, typemin, uinttype, unsafe_trunc
+import Base: *, +, -, /, abs, eps, exponent_half, exponent_mask, exponent_one, floatmax,
+             floatmin, precision, promote_rule, reinterpret, rem, round, sign_mask,
+             significand_mask, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -174,7 +174,7 @@ end
 
 # * arithmetic
 
-for (F, f, i) = llvmvars
+for (F, f, i, fn) = llvmvars
     for (op, fop) = ((:*, :fmul), (:/, :fdiv), (:+, :fadd), (:-, :fsub), (:rem, :frem))
         @eval $op(x::$F, y::$F) = Base.llvmcall(
             $"""
@@ -186,6 +186,15 @@ for (F, f, i) = llvmvars
             """,
             $F, Tuple{$F,$F}, x, y)
     end
+
+    @eval abs(x::$F) = Base.llvmcall(
+        ($"""declare $f  @llvm.fabs.$fn($f %Val)""",
+         $"""
+         %x = bitcast $i %0 to $f
+         %y = call $f @llvm.fabs.$fn($f %x)
+         %z = bitcast $f %y to $i
+         ret $i %z
+         """), $F, Tuple{$F}, x)
 end
 
 -(x::F) where {F<:WBF} = F(-0.0) - x

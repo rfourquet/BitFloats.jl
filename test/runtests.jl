@@ -106,6 +106,9 @@ end
         x = _rand(T)
         @test -x  isa T
         @test -(-x) == x
+        @test x == abs(x) || x == -abs(x) # TODO: be more precise
+        @test abs(T(-1)) == T(1)
+        @test abs(T(1)) == T(1)
     end
 end
 
