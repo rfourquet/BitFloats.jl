@@ -6,8 +6,8 @@ export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
 import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent_half, exponent_mask, exponent_one,
-             floatmax, floatmin, precision, promote_rule, reinterpret, rem, round, sign_mask,
-             significand_mask, typemax, typemin, uinttype, unsafe_trunc
+             floatmax, floatmin, isequal, isless, precision, promote_rule, reinterpret, rem,
+             round, sign_mask, significand_mask, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -186,7 +186,39 @@ for (F, f, i) = llvmvars
             """,
             Bool, Tuple{$F,$F}, x, y)
     end
+
+    # adapted from fpislt in intrinsics.cpp
+    # could as well be written in Julia
+    @eval fpislt(x::$F, y::$F) = Base.llvmcall(
+        $"""
+        ; %xi = %0
+        ; %yi = %1
+        %xf = bitcast $i %0 to $f
+        %yf = bitcast $i %1 to $f
+        %c11 = fcmp ord $f %xf, %xf ; !isnan(xf)
+        %c12 = fcmp uno $f %yf, %yf ; isnan(yf)
+        %c1  = or i1 %c11, %c12
+        %c21 = fcmp ord $f %xf, %yf ; !(isnan(xf) | isnan(yf))
+        %c2211 = icmp sge $i %0, 0 ; xi >= 0
+        %c2212 = icmp slt $i %0, %1 ; xi < yi
+        %c221 = and i1 %c2211, %c2212
+        %c2221 = icmp slt $i %0, 0 ; xi < 0
+        %c2222 = icmp ugt $i %0, %1 ; unsigned(xi) > unsigned(yi)
+        %c222 = and i1 %c2221, %c2222
+        %c22 = or i1 %c221, %c222
+        %c2 = and i1 %c21, %c22
+        %c = or i1 %c1, %c2
+        %cbool = zext i1 %c to i8
+        ret i8 %cbool
+        """,
+        Bool, Tuple{$F,$F}, x, y)
 end
+
+isless(x::T, y::T) where {T<:WBF} = fpislt(x, y)
+
+# implements Base.fpiseq
+isequal(x::T, y::T) where {T<:WBF} =
+    (isnan(x) & isnan(y)) | (reinterpret(Unsigned, x) === reinterpret(Unsigned, y))
 
 
 # * arithmetic

@@ -103,7 +103,7 @@ end
 @testset "comparisons" begin
     for F = (Float80, Float128)
         x, y = _rand(F), _rand(F)
-        for op = (==, !=, <, <=, >, >=)
+        for op = (==, !=, <, <=, >, >=, isless, isequal)
             @test op(x, y) isa Bool
         end
         @test F(1) == F(1)
@@ -117,6 +117,13 @@ end
         @test (x == y) == !(x != y)
         @test !(F(1) == F(2))
         @test !(F(1) != F(1))
+        @test isequal(x, x)
+        @test isequal(y, y)
+        @test isequal(x, y) || isless(x, y) || isless(y, x)
+        N = F(NaN)
+        @test N != N
+        @test isequal(N, N)
+        @test !(N == N)
     end
 end
 
