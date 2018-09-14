@@ -55,6 +55,14 @@ end
     @test precision(Float128) == 113
     @test Inf80  == typemax(Float80)  == -typemin(Float80)
     @test Inf128 == typemax(Float128) == -typemin(Float128)
+    @test isnan(NaN80)
+    @test isnan(NaN128)
+    @test !isnan(_rand(Float80)) # very unlikely to fail
+    @test !isnan(_rand(Float128))
+    @test isinf(Inf80)
+    @test isinf(Inf128)
+    @test !isinf(_rand(Float80))
+    @test !isinf(_rand(Float128))
 end
 
 @testset "conversions" begin
