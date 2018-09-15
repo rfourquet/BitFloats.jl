@@ -327,6 +327,16 @@ function (::Type{BigFloat})(x::WBF)
     end
 end
 
+# alternative for Float128, useful to compare accuracy
+function BigFloat_mpfr(x::Float128)
+    z = BigFloat()
+    ccall((:mpfr_set_float128, :libmpfr), Int32, (Ref{BigFloat}, Float128, Int32), z, x, Base.MPFR.ROUNDING_MODE[])
+    if isnan(x) && signbit(x) != signbit(z)
+        z.sign = -z.sign
+    end
+    return z
+end
+
 
 # ** round
 

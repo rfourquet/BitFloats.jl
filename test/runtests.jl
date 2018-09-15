@@ -1,8 +1,8 @@
 using BitFloats, Test
 
-using BitFloats: BuiltinInts, Int80, UInt80, decompose, explicit_bit, exponent_half,
-                 exponent_mask, exponent_one, sign_mask, significand_mask, uinttype,
-                 uniontypes
+using BitFloats: BigFloat_mpfr, BuiltinInts, Int80, UInt80, decompose, explicit_bit,
+                 exponent_half, exponent_mask, exponent_one, sign_mask, significand_mask,
+                 uinttype, uniontypes
 
 @testset "definitions" begin
     @test @isdefined Float80
@@ -142,6 +142,8 @@ end
         x = rand(Int32)+rand()
         @test BigFloat(F(x)) == x
     end
+    x = _rand(Float128)
+    @test isequal(BigFloat(x), BigFloat_mpfr(x))
 end
 
 @testset "round" begin
