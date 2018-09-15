@@ -124,6 +124,15 @@ end
         x = _rand(F)
         @test reinterpret(Unsigned, x) === reinterpret(uinttype(F), x)
         @test reinterpret(Signed, x) === reinterpret(F == Float80 ? Int80 : Int128, x)
+        @test trunc(Signed, F(1.2)) === 1
+        @test trunc(Integer, F(1.2)) === 1
+        @test trunc(Unsigned, F(1.2)) === UInt(1)
+        @test Signed(F(1)) === 1
+        @test Unsigned(F(1)) === UInt(1)
+        if F != Float128 #BROKEN
+            @test_throws InexactError Signed(F(1.2))
+            @test_throws InexactError Unsigned(F(1.2))
+        end
     end
 end
 

@@ -124,6 +124,13 @@ reinterpret(::Type{Unsigned}, x::Float128) = reinterpret(UInt128, x)
 reinterpret(::Type{Signed},   x::Float80)  = reinterpret(Int80, x)
 reinterpret(::Type{Signed},   x::Float128) = reinterpret(Int128, x)
 
+Signed(  x::WBF) = Int(x)
+Unsigned(x::WBF) = UInt(x)
+
+trunc(::Type{Signed},   x::WBF) = trunc(Int, x)
+trunc(::Type{Integer},  x::WBF) = trunc(Int, x)
+trunc(::Type{Unsigned}, x::WBF) = trunc(UInt, x)
+
 
 # ** from ints
 
