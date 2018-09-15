@@ -92,13 +92,24 @@ end
             b = BigFloat(x)
             @test x == b
             y = nextfloat(x)
-            @test nextfloat(b) == y
+            @test issubnormal(y) || issubnormal(x) || nextfloat(b) == y
             y = prevfloat(y)
             @test y == x
             y = prevfloat(y)
-            @test prevfloat(b) == y
+            @test issubnormal(y) || issubnormal(x) || prevfloat(b) == y
             @test nextfloat(y) == x
         end
+    end
+end
+
+@testset "issubnormal" begin
+    for F = (Float80, Float128)
+        x = floatmin(F)
+        @test !issubnormal(x)
+        @test !issubnormal(-x)
+        @test issubnormal(prevfloat(x))
+        @test issubnormal(nextfloat(-x))
+        @test !issubnormal(rand(F))
     end
 end
 

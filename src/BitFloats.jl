@@ -7,8 +7,9 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             nextfloat, precision, promote_rule, reinterpret, rem, round, show, sign_mask,
-             significand, significand_mask, trunc, typemax, typemin, uinttype, unsafe_trunc
+             issubnormal, nextfloat, precision, promote_rule, reinterpret, rem, round, show,
+             sign_mask, significand, significand_mask, trunc, typemax, typemin, uinttype,
+             unsafe_trunc
 
 using Base: bswap_int, llvmcall, uniontypes
 
@@ -80,7 +81,9 @@ precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
 
 
-# * exponent & significand
+# * float functions
+
+# ** exponent & significand
 
 function exponent(x::T) where T<:WBF
     @noinline throw1(x) = throw(DomainError(x, "Cannot be NaN or Inf."))
@@ -117,7 +120,7 @@ function significand(x::T) where T<:WBF
 end
 
 
-# * nextfloat
+# ** nextfloat
 
 function squeezeimplicit(u::UInt80)
     s = ((u & significand_mask(Float80)) << 1) & significand_mask(Float80)
@@ -172,6 +175,15 @@ function nextfloat(f::WBF, d::Integer)
         fu |= sign_mask(F)
     end
     reinterpret(F, fu)
+end
+
+
+# ** issubnormal
+
+# for Float80, left-most (non-implicit) bit of significand should be 0
+function issubnormal(x::T) where {T<:WBF}
+    y = reinterpret(Unsigned, x)
+    (y & exponent_mask(T) == 0) & (y & significand_mask(T) != 0)
 end
 
 
