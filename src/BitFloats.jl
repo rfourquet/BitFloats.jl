@@ -7,9 +7,11 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             issubnormal, nextfloat, precision, promote_rule, reinterpret, rem, round, show,
-             sign_mask, significand, significand_mask, trunc, typemax, typemin, uinttype,
-             unsafe_trunc
+             issubnormal, ldexp, nextfloat, precision, promote_rule, reinterpret, rem, round,
+             show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
+             uinttype, unsafe_trunc
+
+import Base.Math: exponent_raw_max
 
 using Base: bswap_int, llvmcall, uniontypes
 
@@ -58,6 +60,8 @@ significand_bits(::Type{T}) where {T<:WBF} = trailing_ones(significand_mask(T))
 exponent_bits(   ::Type{T}) where {T<:WBF} = sizeof(T)*8 - significand_bits(T) - 1
 exponent_bias(   ::Type{T}) where {T<:WBF} = Int(exponent_one(T) >> significand_bits(T))
 # exponent_bias is 16383 for both types
+exponent_raw_max(::Type{T}) where {T<:WBF} = Int(exponent_mask(T) >> significand_bits(T))
+
 
 eps(     ::Type{Float80})  = reinterpret(Float80,  0x3fc0_8000_0000_0000_0000 % UInt80)
 floatmin(::Type{Float80})  = reinterpret(Float80,  0x0001_8000_0000_0000_0000 % UInt80)
@@ -82,8 +86,6 @@ precision(::Type{Float128}) = 113
 
 
 # * float functions
-
-# ** exponent & significand
 
 function exponent(x::T) where T<:WBF
     @noinline throw1(x) = throw(DomainError(x, "Cannot be NaN or Inf."))
@@ -118,9 +120,6 @@ function significand(x::T) where T<:WBF
     xu = (xu & ~exponent_mask(T)) | exponent_one(T)
     return reinterpret(T, xu)
 end
-
-
-# ** nextfloat
 
 function squeezeimplicit(u::UInt80)
     s = ((u & significand_mask(Float80)) << 1) & significand_mask(Float80)
@@ -177,13 +176,58 @@ function nextfloat(f::WBF, d::Integer)
     reinterpret(F, fu)
 end
 
-
-# ** issubnormal
-
 # for Float80, left-most (non-implicit) bit of significand should be 0
 function issubnormal(x::T) where {T<:WBF}
     y = reinterpret(Unsigned, x)
     (y & exponent_mask(T) == 0) & (y & significand_mask(T) != 0)
+end
+
+function ldexp(x::T, e::Integer) where T<:WBF
+    xu = reinterpret(Unsigned, x)
+    xs = xu & ~sign_mask(T)
+    xs >= exponent_mask(T) && return x # NaN or Inf
+    k = Int(xs >> significand_bits(T))
+    if k == 0 # x is subnormal
+        xs == 0 && return x # +-0
+        m = leading_zeros(xs) - exponent_bits(T) - (x isa Float80)
+        ys = xs << unsigned(m)
+        xu = ys | (xu & sign_mask(T))
+        k = 1 - m
+        # underflow, otherwise may have integer underflow in the following n + k
+        e < -50000 && return flipsign(T(0.0), x)
+    end
+    # For cases where e of an Integer larger than Int make sure we properly
+    # overflow/underflow; this is optimized away otherwise.
+    if e > typemax(Int)
+        return flipsign(T(Inf), x)
+    elseif e < typemin(Int)
+        return flipsign(T(0.0), x)
+    end
+    n = e % Int
+    k += n
+    # overflow, if k is larger than maximum possible exponent
+    if k >= exponent_raw_max(T)
+        return flipsign(T(Inf), x)
+    end
+    if k > 0 # normal case
+        xu = (xu & ~exponent_mask(T)) | (rem(k, uinttype(T)) << significand_bits(T))
+        if x isa Float80
+            xu |= explicit_bit() # was
+        end
+        return reinterpret(T, xu)
+    else # subnormal case
+        expo = significand_bits(T) - (x isa Float80)
+        if k <= -expo # underflow
+            # overflow, for the case of integer overflow in n + k
+            e > 50000 && return flipsign(T(Inf), x)
+            return flipsign(T(0.0), x)
+        end
+        k += expo # k > 0
+        z = T(2.0)^-expo
+        xu = (xu & ~exponent_mask(T)) | (rem(k, uinttype(T)) << significand_bits(T))
+        x isa Float80 && (xu |= explicit_bit())
+        return z*reinterpret(T, xu)
+    end
 end
 
 

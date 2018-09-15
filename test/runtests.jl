@@ -113,6 +113,23 @@ end
     end
 end
 
+@testset "ldexp & eps" begin
+    for F = (Float80, Float128)
+        x = _rand(F)
+        b = big(x)
+        d = 2^rand(1:16)
+        n = rand(-d:d)
+        r = ldexp(b, n)
+        @test ldexp(x, n) == F(r) # conversion to F, in case of under or overflow
+
+        # eps
+        @test eps(F) == eps(F(1))
+        @test isnan(eps(F(NaN)))
+        @test isnan(eps(F(Inf)))
+        @test isnan(eps(F(-Inf)))
+    end
+end
+
 @testset "conversions" begin
     for F = (Float80, Float128)
         for T = (uniontypes(BuiltinInts)..., Float16, Float32, Float64, Float80, Float128)
