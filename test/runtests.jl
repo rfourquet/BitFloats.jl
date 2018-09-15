@@ -141,6 +141,9 @@ end
         @test BigFloat(F(-Inf)) == -Inf
         x = rand(Int32)+rand()
         @test BigFloat(F(x)) == x
+        @test F(BigFloat(F(x))) === F(x)
+        y = _rand(F)
+        @test isequal(F(BigFloat(y)), y)
     end
     x = _rand(Float128)
     @test isequal(BigFloat(x), BigFloat_mpfr(x))

@@ -337,6 +337,56 @@ function BigFloat_mpfr(x::Float128)
     return z
 end
 
+function Float128(x::BigFloat)
+    ispos = x.sign == 1
+    if isnan(x)
+        NaN128
+    elseif iszero(x) # should not be necessary (i.e. it works in the else branch too)
+       x.sign * zero(Float128)
+    else
+        expo = x.exp - 1 # exponent bias for mpfr is -1
+        # comparing x > floatmax(Float128) allocates a BigFloat, so we look at
+        # expo to check for infinity
+        if expo > 16383 || isinf(x)
+            return x.sign * Inf128
+        end
+        e = Int(expo + exponent_bias(Float128))
+        @assert e <= Int(0x7fff)
+        n = ((x.prec-1) >> ( 6 - (BITS_PER_LIMB === 32))) + 1 # should be the number of limbs
+        @assert n >= 1
+        if BITS_PER_LIMB === 64
+            u = (unsafe_load(x.d, n) % UInt128) << 64
+            if n > 1
+                u |= unsafe_load(x.d, n-1)
+            end
+        else
+            u = zero(UInt128)
+            shift = 96
+            while n > 0 && shift >= 0
+                u |= (unsafe_load(x.d, n) % UInt128) << shift
+                n -= 1
+                shift -= 32
+            end
+        end
+        if e <= 0 # subnormal
+            u >>= -e
+            e = 0
+        else
+            u <<= 1 # remove explicit bit
+        end
+        u >>= exponent_bits(Float128) + 1
+        u |= UInt128(e) << significand_bits(Float128)
+        u |= sign_mask(Float128) * !ispos
+        reinterpret(Float128, u)
+    end
+end
+
+# doesn't work properly :(
+# Float128_mpfr(x::BigFloat) =
+#    ccall((:mpfr_get_float128, :libmpfr), Float128, (Ref{BigFloat}, Int32), x, Base.MPFR.ROUNDING_MODE[])
+
+Float80(x::BigFloat) = Float80(Float128(x))
+
 
 # ** round
 
