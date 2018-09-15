@@ -153,6 +153,50 @@ for (F, f, i) = llvmvars
 end
 
 
+# ** Float80 <-> Float128
+
+promote_rule(::Type{Float128}, ::Type{Float80}) = Float128
+
+if false # unimplemented by llvm
+    @eval begin
+        (::Type{Float128})(x::Float80) = Base.llvmcall(
+            """
+            %x = bitcast i80 %0 to x86_fp80
+            %y = fpext x86_fp80 %x to fp128
+            %yi = bitcast fp128 %y to i128
+            ret i128 %yi
+            """,
+            Float128, Tuple{Float80}, x)
+
+        (::Type{Float80})(x::Float128) = Base.llvmcall(
+            """
+            %x = bitcast i128 %0 to fp128
+            %y = fptrunc fp128 %x to x86_fp80
+            %yi = bitcast x86_fp80 %y to i80
+            ret i80 %yi
+            """,
+            Float80, Tuple{Float128}, x)
+    end
+else
+    function (::Type{Float128})(x::Float80)
+        u = reinterpret(Unsigned, x)
+        se = ((u & ~significand_mask(Float80)) % UInt128) << 48
+        u &= significand_mask(Float80) >> 1 # >> 1 for explicit bit
+        reinterpret(Float128, se | ((u % UInt128) << 49))
+    end
+
+    function (::Type{Float80})(x::Float128)
+        u = reinterpret(Unsigned, x)
+        se = ((u & ~significand_mask(Float128)) >> 48) % UInt80
+        v = ((u & significand_mask(Float128)) >> 49) % UInt80
+        if se & exponent_mask(Float80) != 0
+            v |= explicit_bit()
+        end
+        reinterpret(Float80, se | v)
+    end
+end
+
+
 # ** round
 
 for (F, f, i, fn) = llvmvars
