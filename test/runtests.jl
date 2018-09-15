@@ -65,12 +65,22 @@ end
     @test !isinf(_rand(Float128))
 end
 
-@testset "exponent" begin
+@testset "exponent & significand" begin
     for F = (Float80, Float128)
         for k = -8.0:8.0
             n = 2.0^k
-            @test exponent(n*(rand(F) + 1)) == k
+            x = rand(F) + 1
+            @test exponent(n*x) == k
+            @test significand(n*x) == significand(x)
         end
+        @test significand(zero(F)) == zero(F)
+        @test significand(F(NaN)) === F(NaN)
+        @test significand(F(Inf)) === F(Inf)
+        @test significand(F(-Inf)) === F(-Inf)
+        @test_throws DomainError exponent(zero(F))
+        @test_throws DomainError exponent(F(NaN))
+        @test_throws DomainError exponent(F(Inf))
+        @test_throws DomainError exponent(F(-Inf))
     end
 end
 

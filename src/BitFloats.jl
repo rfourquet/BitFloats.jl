@@ -7,8 +7,8 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent, exponent_half, exponent_mask,
              exponent_one, floatmax, floatmin, isequal, isless, precision, promote_rule,
-             reinterpret, rem, round, sign_mask, significand_mask, typemax, typemin,
-             uinttype, unsafe_trunc
+             reinterpret, rem, round, sign_mask, significand, significand_mask, typemax,
+             typemin, uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -78,7 +78,7 @@ precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
 
 
-# * exponent
+# * exponent & significand
 
 function exponent(x::T) where T<:WBF
     @noinline throw1(x) = throw(DomainError(x, "Cannot be NaN or Inf."))
@@ -95,6 +95,23 @@ function exponent(x::T) where T<:WBF
         k = 1 - m
     end
     return k - exponent_bias(T)
+end
+
+function significand(x::T) where T<:WBF
+    xu = reinterpret(Unsigned, x)
+    xs = xu & ~sign_mask(T)
+    xs >= exponent_mask(T) && return x # NaN or Inf
+    if xs <= significand_mask(T) # x is subnormal
+        xs == 0 && return x # +-0
+        m = unsigned(leading_zeros(xs) - exponent_bits(T)) - (x isa Float80)
+        xs <<= m
+        xu = xs | (xu & sign_mask(T))
+        if x isa Float80
+            xu |= explicit_bit() # set non-implicit bit to 1
+        end
+    end
+    xu = (xu & ~exponent_mask(T)) | exponent_one(T)
+    return reinterpret(T, xu)
 end
 
 
