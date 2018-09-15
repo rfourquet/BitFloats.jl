@@ -5,10 +5,10 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, eps, exponent, exponent_half,
-             exponent_mask, exponent_one, floatmax, floatmin, isequal, isless, precision,
-             promote_rule, reinterpret, rem, round, sign_mask, significand, significand_mask,
-             trunc, typemax, typemin, uinttype, unsafe_trunc
+import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
+             exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
+             precision, promote_rule, reinterpret, rem, round, sign_mask, significand,
+             significand_mask, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: bswap_int, llvmcall, uniontypes
 
@@ -393,6 +393,26 @@ end
 
 ^(x::WBF, n::Integer) = x^(oftype(x, n))
 -(x::F) where {F<:WBF} = F(-0.0) - x
+
+
+# * hashing
+
+# could return UInt64 instead of Int128 for Float80
+function decompose(x::WBF)::Tuple{Int128,Int,Int}
+    T = typeof(x)
+    isnan(x) && return 0, 0, 0
+    isinf(x) && return ifelse(x < 0, -1, 1), 0, 0
+    n = reinterpret(Unsigned, x)
+    s = (n & significand_mask(T)) % Int128
+    e = ((n & exponent_mask(T)) >> significand_bits(T)) % Int
+    if T === Float128 # add explicit bit
+        s |= Int128(e != 0) << significand_bits(T)
+    end
+    d = ifelse(signbit(x), -1, 1)
+    # for Float80, significand_bits(T) includes the explicit bit
+    E = exponent_bias(T) + significand_bits(T) - (T === Float80)
+    s, e - E + (e == 0), d
+end
 
 
 # * rand

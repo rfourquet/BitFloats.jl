@@ -1,7 +1,8 @@
 using BitFloats, Test
 
-using BitFloats: BuiltinInts, Int80, UInt80, explicit_bit, exponent_half, exponent_mask,
-                 exponent_one, sign_mask, significand_mask, uinttype, uniontypes
+using BitFloats: BuiltinInts, Int80, UInt80, decompose, explicit_bit, exponent_half,
+                 exponent_mask, exponent_one, sign_mask, significand_mask, uinttype,
+                 uniontypes
 
 @testset "definitions" begin
     @test @isdefined Float80
@@ -198,6 +199,21 @@ end
         @test T(2)^3 == 8
         @test T(2)^-1.0 == 0.5
     end
+end
+
+@testset "hashing" begin
+    for T = (Float80, Float128)
+        T == Float128 && continue # TODO
+        x = _rand(T)
+        num, pow, den = BitFloats.decompose(x)
+        # TODO: WAT? this intermediate value y needs to be computed for the test to not fail
+        y = T(num) * T(2)^pow / den
+        @test T(num) * T(2)^pow / den == x
+    end
+    n = rand(Int)
+    @test hash(n) == hash(Float80(n)) == hash(Float128(n))
+    f = _rand(Float64)
+    @test hash(f) == hash(Float80(f)) == hash(Float128(f))
 end
 
 @testset "rand" begin
