@@ -8,7 +8,7 @@ export Float80,  Inf80,  NaN80,
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, eps, exponent, exponent_half,
              exponent_mask, exponent_one, floatmax, floatmin, isequal, isless, precision,
              promote_rule, reinterpret, rem, round, sign_mask, significand, significand_mask,
-             typemax, typemin, uinttype, unsafe_trunc
+             trunc, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: bswap_int, llvmcall, uniontypes
 
@@ -127,6 +127,7 @@ reinterpret(::Type{Signed},   x::Float128) = reinterpret(Int128, x)
 
 # ** from ints
 
+# unsafe_trunc & F(::T)
 for (F, f, i) = llvmvars
     for T = uniontypes(BuiltinInts)
         s = 8*sizeof(T)
@@ -155,6 +156,51 @@ for (F, f, i) = llvmvars
             ret i$s %y
             """,
             $T, Tuple{$F}, x)
+    end
+end
+
+# trunc & T(::F)
+for Tf in (Float80, Float128)
+    for Ti in Base.BitInteger_types
+        Ti == Int128 && continue
+        @eval begin
+            function trunc(::Type{$Ti},x::$Tf)
+                # unlike in Base, these expressions can't be computed at compile time,
+                # this segfaults otherwise
+                if $Tf(typemin($Ti)) - one($Tf) < x < $Tf(typemax($Ti)) + one($Tf)
+                    return unsafe_trunc($Ti, x)
+                else
+                    throw(InexactError(:trunc, $Ti, x))
+                end
+            end
+
+            function (::Type{$Ti})(x::$Tf)
+                if $Tf(typemin($Ti)) <= x < $Tf(typemax($Ti)) + one($Tf) && (round(x, RoundToZero) == x)
+                    return unsafe_trunc($Ti, x)
+                else
+                    throw(InexactError($(Expr(:quote,Ti.name.name)), $Ti, x))
+                end
+            end
+        end
+    end
+
+    Ti = Int128
+    @eval begin
+        function trunc(::Type{$Ti},x::$Tf)
+            if $Tf(typemin($Ti)) <= x < $Tf(typemax($Ti))
+                return unsafe_trunc($Ti,x)
+            else
+                throw(InexactError(:trunc, $Ti, x))
+            end
+        end
+
+        function (::Type{$Ti})(x::$Tf)
+            if ($Tf(typemin($Ti)) <= x < $Tf(typemax($Ti))) && (round(x, RoundToZero) == x)
+                return unsafe_trunc($Ti,x)
+            else
+                throw(InexactError($(Expr(:quote,Ti.name.name)), $Ti, x))
+            end
+        end
     end
 end
 

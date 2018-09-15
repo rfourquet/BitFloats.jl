@@ -92,6 +92,17 @@ end
             T == Bool && continue
             if T <: Integer
                 @test unsafe_trunc(T, F(t)) isa T
+                @test trunc(T, F(t)) isa T
+                @test trunc(T, F(2.3)) == 2
+                if T <: Signed
+                    @test trunc(T, F(-2.3)) == -2
+                else
+                    @test_throws InexactError trunc(T, F(-2.3))
+                end
+                if F != Float128 # BROKEN
+                    @test_throws InexactError T(F(2.3))
+                end
+
                 @test promote_type(F, T) == F
             else
                 @test T(F(t)) isa T
