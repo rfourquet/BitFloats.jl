@@ -238,11 +238,12 @@ end
     for T = (Float80, Float128)
         n = rand(Int)
         for op = (*, /, +, -, rem, ^)
-            op == (^) && T == Float128 && continue # TODO
             for randfun = (_rand, rand)
                 a, b = randfun(T), randfun(T)
+                randfun == _rand && op == (^) && T == Float128 && continue # BUG crash otherwise
                 r = op(a, b)
                 @test r isa T
+                op == (^) && T == Float128 && continue # BUG crash otherwise
                 @test op(a, n) isa T
             end
         end
@@ -252,7 +253,6 @@ end
         @test x >= 0 ? x == abs(x) : x == -abs(x)
         @test abs(T(-1)) == T(1)
         @test abs(T(1)) == T(1)
-        T == Float128 && continue # TODO
         @test T(2)^3 == 8
         @test T(2)^-1.0 == 0.5
     end
@@ -260,7 +260,6 @@ end
 
 @testset "hashing" begin
     for T = (Float80, Float128)
-        T == Float128 && continue # TODO
         x = _rand(T)
         num, pow, den = BitFloats.decompose(x)
         # TODO: WAT? this intermediate value y needs to be computed for the test to not fail

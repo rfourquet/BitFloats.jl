@@ -435,7 +435,7 @@ function (::Type{BigFloat})(x::WBF)
         for i = 1:nlimbs
             l = (u >> ((i-n) * BITS_PER_LIMB)) % Limb
             i == 1 && (l &= mask)
-            unsafe_store!(z.d, l, i)
+            GC.@preserve z unsafe_store!(z.d, l, i)
         end
         z
     end
@@ -468,7 +468,7 @@ function Float128(x::BigFloat)
         @assert e <= Int(0x7fff)
         n = ((x.prec-1) >> ( 6 - (BITS_PER_LIMB === 32))) + 1 # should be the number of limbs
         @assert n >= 1
-        if BITS_PER_LIMB === 64
+        GC.@preserve x if BITS_PER_LIMB === 64
             u = (unsafe_load(x.d, n) % UInt128) << 64
             if n > 1
                 u |= unsafe_load(x.d, n-1)
@@ -604,6 +604,8 @@ for (F, f, i, fn) = llvmvars
          ret $i %mi
          """), $F, Tuple{$F,$F}, x, y)
 end
+
+^(x::Float128, y::Float128) = Float128(big(x)^big(y))
 
 ^(x::WBF, n::Integer) = x^(oftype(x, n))
 -(x::F) where {F<:WBF} = F(-0.0) - x
