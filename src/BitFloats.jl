@@ -7,7 +7,7 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             precision, promote_rule, reinterpret, rem, round, sign_mask, significand,
+             precision, promote_rule, reinterpret, rem, round, show, sign_mask, significand,
              significand_mask, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: bswap_int, llvmcall, uniontypes
@@ -470,6 +470,15 @@ rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen01{T}}) where {T<:WBF} =
 # * misc
 
 bswap(x::WBF) = bswap_int(x)
+
+show(io::IO, x::WBF) =
+    if isnan(x)
+        print(io, "NaN", sizeof(x)*8)
+    elseif isinf(x)
+        print(io, x > 0 ? "" : '-',  "Inf", sizeof(x)*8)
+    else
+        show(io, BigFloat(x, precision(x)))
+    end
 
 
 end # module
