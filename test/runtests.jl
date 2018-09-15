@@ -65,6 +65,15 @@ end
     @test !isinf(_rand(Float128))
 end
 
+@testset "exponent" begin
+    for F = (Float80, Float128)
+        for k = -8.0:8.0
+            n = 2.0^k
+            @test exponent(n*(rand(F) + 1)) == k
+        end
+    end
+end
+
 @testset "conversions" begin
     for F = (Float80, Float128)
         for T = (uniontypes(BuiltinInts)..., Float16, Float32, Float64, Float80, Float128)

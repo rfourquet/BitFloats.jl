@@ -5,9 +5,10 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent_half, exponent_mask, exponent_one,
-             floatmax, floatmin, isequal, isless, precision, promote_rule, reinterpret, rem,
-             round, sign_mask, significand_mask, typemax, typemin, uinttype, unsafe_trunc
+import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent, exponent_half, exponent_mask,
+             exponent_one, floatmax, floatmin, isequal, isless, precision, promote_rule,
+             reinterpret, rem, round, sign_mask, significand_mask, typemax, typemin,
+             uinttype, unsafe_trunc
 
 using Base: llvmcall, uniontypes
 
@@ -75,6 +76,26 @@ const NaN128 = reinterpret(Float128, 0xffff_8000_0000_0000_0000_0000_0000_0000)
 
 precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
+
+
+# * exponent
+
+function exponent(x::T) where T<:WBF
+    @noinline throw1(x) = throw(DomainError(x, "Cannot be NaN or Inf."))
+    @noinline throw2(x) = throw(DomainError(x, "Cannot be subnormal converted to 0."))
+    xs = reinterpret(Unsigned, x) & ~sign_mask(T)
+    xs >= exponent_mask(T) && throw1(x)
+    k = Int(xs >> significand_bits(T))
+    if k == 0 # x is subnormal
+        xs == 0 && throw2(x)
+        m = leading_zeros(xs) - exponent_bits(T)
+        if x isa Float80
+            m -= 1 # non-implicit bit
+        end
+        k = 1 - m
+    end
+    return k - exponent_bias(T)
+end
 
 
 # * conversions
