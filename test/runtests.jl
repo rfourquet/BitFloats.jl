@@ -159,7 +159,8 @@ end
 @testset "arithmetic" begin
     for T = (Float80, Float128)
         n = rand(Int)
-        for op = (*, /, +, -, rem)
+        for op = (*, /, +, -, rem, ^)
+            op == (^) && T == Float128 && continue # TODO
             for randfun = (_rand, rand)
                 a, b = randfun(T), randfun(T)
                 r = op(a, b)
@@ -173,6 +174,9 @@ end
         @test x >= 0 ? x == abs(x) : x == -abs(x)
         @test abs(T(-1)) == T(1)
         @test abs(T(1)) == T(1)
+        T == Float128 && continue # TODO
+        @test T(2)^3 == 8
+        @test T(2)^-1.0 == 0.5
     end
 end
 

@@ -5,7 +5,7 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, abs, bswap, eps, exponent, exponent_half,
+import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, eps, exponent, exponent_half,
              exponent_mask, exponent_one, floatmax, floatmin, isequal, isless, precision,
              promote_rule, reinterpret, rem, round, sign_mask, significand, significand_mask,
              typemax, typemin, uinttype, unsafe_trunc
@@ -164,7 +164,7 @@ end
 for (F, f, i) = llvmvars
     for (S, s) = ((Float32, :float), (Float64, :double))
         @eval begin
-            (::Type{$F})(x::$S) = Base.llvmcall(
+            (::Type{$F})(x::$S) = llvmcall(
                 $"""
                 %y = fpext $s %0 to $f
                 %yi = bitcast $f %y to $i
@@ -172,7 +172,7 @@ for (F, f, i) = llvmvars
                 """,
                 $F, Tuple{$S}, x)
 
-            (::Type{$S})(x::$F) = Base.llvmcall(
+            (::Type{$S})(x::$F) = llvmcall(
                 $"""
                 %x = bitcast $i %0 to $f
                 %y = fptrunc $f %x to $s
@@ -197,7 +197,7 @@ promote_rule(::Type{Float128}, ::Type{Float80}) = Float128
 
 if false # unimplemented by llvm
     @eval begin
-        (::Type{Float128})(x::Float80) = Base.llvmcall(
+        (::Type{Float128})(x::Float80) = llvmcall(
             """
             %x = bitcast i80 %0 to x86_fp80
             %y = fpext x86_fp80 %x to fp128
@@ -206,7 +206,7 @@ if false # unimplemented by llvm
             """,
             Float128, Tuple{Float80}, x)
 
-        (::Type{Float80})(x::Float128) = Base.llvmcall(
+        (::Type{Float80})(x::Float128) = llvmcall(
             """
             %x = bitcast i128 %0 to fp128
             %y = fptrunc fp128 %x to x86_fp80
@@ -242,7 +242,7 @@ for (F, f, i, fn) = llvmvars
     for (mode, llvmfun) = ((:ToZero, :trunc), (:Down, :floor),
                            (:Up, :ceil), (:Nearest, :rint))
         fun = "@llvm.$llvmfun.$fn"
-        @eval round(x::$F, r::$(RoundingMode{mode})) = Base.llvmcall(
+        @eval round(x::$F, r::$(RoundingMode{mode})) = llvmcall(
             ($"""declare $f $fun($f %Val)""",
              $"""
              %x = bitcast $i %0 to $f
@@ -258,7 +258,7 @@ end
 
 for (F, f, i) = llvmvars
     for (op, fop) = ((:(==), :oeq), (:!=, :une), (:<, :olt), (:<=, :ole))
-        @eval $op(x::$F, y::$F) = Base.llvmcall(
+        @eval $op(x::$F, y::$F) = llvmcall(
             $"""
             %x = bitcast $i %0 to $f
             %y = bitcast $i %1 to $f
@@ -271,7 +271,7 @@ for (F, f, i) = llvmvars
 
     # adapted from fpislt in intrinsics.cpp
     # could as well be written in Julia
-    @eval fpislt(x::$F, y::$F) = Base.llvmcall(
+    @eval fpislt(x::$F, y::$F) = llvmcall(
         $"""
         ; %xi = %0
         ; %yi = %1
@@ -307,18 +307,17 @@ isequal(x::T, y::T) where {T<:WBF} =
 
 for (F, f, i, fn) = llvmvars
     for (op, fop) = ((:*, :fmul), (:/, :fdiv), (:+, :fadd), (:-, :fsub), (:rem, :frem))
-        @eval $op(x::$F, y::$F) = Base.llvmcall(
+        @eval $op(x::$F, y::$F) = llvmcall(
             $"""
             %x = bitcast $i %0 to $f
             %y = bitcast $i %1 to $f
             %m = $fop $f %x, %y
             %mi = bitcast $f %m to $i
             ret $i %mi
-            """,
-            $F, Tuple{$F,$F}, x, y)
+            """, $F, Tuple{$F,$F}, x, y)
     end
 
-    @eval abs(x::$F) = Base.llvmcall(
+    @eval abs(x::$F) = llvmcall(
         ($"""declare $f  @llvm.fabs.$fn($f %Val)""",
          $"""
          %x = bitcast $i %0 to $f
@@ -326,8 +325,20 @@ for (F, f, i, fn) = llvmvars
          %z = bitcast $f %y to $i
          ret $i %z
          """), $F, Tuple{$F}, x)
+
+    F == Float128 && continue # broken
+    @eval ^(x::$F, y::$F) = llvmcall(
+        ($"""declare $f @llvm.pow.$fn($f %Val, $f %Power)""",
+         $"""
+         %x = bitcast $i %0 to $f
+         %y = bitcast $i %1 to $f
+         %m = call $f @llvm.pow.$fn($f %x, $f %y)
+         %mi = bitcast $f %m to $i
+         ret $i %mi
+         """), $F, Tuple{$F,$F}, x, y)
 end
 
+^(x::WBF, n::Integer) = x^(oftype(x, n))
 -(x::F) where {F<:WBF} = F(-0.0) - x
 
 
