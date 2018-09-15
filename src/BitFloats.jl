@@ -7,8 +7,8 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             precision, promote_rule, reinterpret, rem, round, show, sign_mask, significand,
-             significand_mask, trunc, typemax, typemin, uinttype, unsafe_trunc
+             nextfloat, precision, promote_rule, reinterpret, rem, round, show, sign_mask,
+             significand, significand_mask, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 using Base: bswap_int, llvmcall, uniontypes
 
@@ -114,6 +114,64 @@ function significand(x::T) where T<:WBF
     end
     xu = (xu & ~exponent_mask(T)) | exponent_one(T)
     return reinterpret(T, xu)
+end
+
+
+# * nextfloat
+
+function squeezeimplicit(u::UInt80)
+    s = ((u & significand_mask(Float80)) << 1) & significand_mask(Float80)
+    ((u & ~significand_mask(Float80)) | s) >> 1
+end
+
+function unsqueezeimplicit(u::UInt80)
+    e = (u & ~(significand_mask(Float80) >> 1)) << 1
+    u = e | (u & (significand_mask(Float80) >> 1))
+    iszero(exponent_mask(Float80) & u) ? # zero or subnormal
+        u :
+        u | explicit_bit()
+end
+
+squeezeimplicit(f::UInt128) = f
+unsqueezeimplicit(f::UInt128) = f
+
+function nextfloat(f::WBF, d::Integer)
+    F = typeof(f)
+    fumax = squeezeimplicit(reinterpret(Unsigned, F(Inf)))
+    U = typeof(fumax)
+
+    isnan(f) && return f
+    fi = reinterpret(Signed, f)
+    fneg = fi < 0
+    fu = squeezeimplicit(unsigned(fi & typemax(fi)))
+
+    dneg = d < 0
+    da = Base.uabs(d)
+    if da > typemax(U)
+        fneg = dneg
+        fu = fumax
+    else
+        du = da % U
+        if fneg ⊻ dneg
+            if du > fu
+                fu = min(fumax, du - fu)
+                fneg = !fneg
+            else
+                fu = fu - du
+            end
+        else
+            if fumax - fu < du
+                fu = fumax
+            else
+                fu = fu + du
+            end
+        end
+    end
+    fu = unsqueezeimplicit(fu)
+    if fneg
+        fu |= sign_mask(F)
+    end
+    reinterpret(F, fu)
 end
 
 

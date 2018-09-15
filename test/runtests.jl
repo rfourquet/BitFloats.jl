@@ -85,6 +85,23 @@ end
     end
 end
 
+@testset "nextfloat" begin
+    for F = (Float80, Float128)
+        while (x = _rand(F); isnan(x)) end
+        setprecision(precision(x)) do
+            b = BigFloat(x)
+            @test x == b
+            y = nextfloat(x)
+            @test nextfloat(b) == y
+            y = prevfloat(y)
+            @test y == x
+            y = prevfloat(y)
+            @test prevfloat(b) == y
+            @test nextfloat(y) == x
+        end
+    end
+end
+
 @testset "conversions" begin
     for F = (Float80, Float128)
         for T = (uniontypes(BuiltinInts)..., Float16, Float32, Float64, Float80, Float128)
