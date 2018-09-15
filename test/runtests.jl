@@ -134,6 +134,13 @@ end
             @test_throws InexactError Signed(F(1.2))
             @test_throws InexactError Unsigned(F(1.2))
         end
+        # BigFloat
+        @test BigFloat(F(1)) == 1.0
+        @test isnan(BigFloat(F(NaN)))
+        @test BigFloat(F(Inf)) == Inf
+        @test BigFloat(F(-Inf)) == -Inf
+        x = rand(Int32)+rand()
+        @test BigFloat(F(x)) == x
     end
 end
 

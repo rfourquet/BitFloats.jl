@@ -12,6 +12,8 @@ import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
 
 using Base: bswap_int, llvmcall, uniontypes
 
+using Base.GMP: BITS_PER_LIMB, Limb
+
 using Core: BuiltinInts
 
 import BitIntegers
@@ -284,6 +286,44 @@ else
             v |= explicit_bit()
         end
         reinterpret(Float80, se | v)
+    end
+end
+
+
+# ** BigFloat
+
+function (::Type{BigFloat})(x::WBF)
+    if isnan(x)
+        BigFloat(NaN)
+    elseif isinf(x)
+        BigFloat(x < 0 ? -Inf : Inf)
+    elseif iszero(x)
+        BigFloat(x < 0 ? -0.0 : 0.0)
+    else
+        z = BigFloat()
+        z.exp = exponent(x) + 1
+        z.sign = x >= zero(x) ? 1 : -1
+        y = significand(x)
+        prec = precision(BigFloat)
+        nlimbs = div(prec + BITS_PER_LIMB-1, BITS_PER_LIMB)
+        mask = ~(Limb(0)) << mod(BITS_PER_LIMB - prec, BITS_PER_LIMB)
+
+        if x isa Float80
+            u = reinterpret(Unsigned, y) % UInt64
+            n = nlimbs - div(64, BITS_PER_LIMB) + 1
+        else
+            u = reinterpret(Unsigned, y) % UInt128
+            u = (u << 16) >> 1
+            u |= sign_mask(Float128) # explicit 1 for the msb
+            n = nlimbs - div(128, BITS_PER_LIMB) + 1
+        end
+
+        for i = 1:nlimbs
+            l = (u >> ((i-n) * BITS_PER_LIMB)) % Limb
+            i == 1 && (l &= mask)
+            unsafe_store!(z.d, l, i)
+        end
+        z
     end
 end
 
