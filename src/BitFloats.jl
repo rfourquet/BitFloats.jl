@@ -5,12 +5,12 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, abs, eps, exponent, exponent_half, exponent_mask,
-             exponent_one, floatmax, floatmin, isequal, isless, precision, promote_rule,
-             reinterpret, rem, round, sign_mask, significand, significand_mask, typemax,
-             typemin, uinttype, unsafe_trunc
+import Base: !=, *, +, -, /, <, <=, ==, abs, bswap, eps, exponent, exponent_half,
+             exponent_mask, exponent_one, floatmax, floatmin, isequal, isless, precision,
+             promote_rule, reinterpret, rem, round, sign_mask, significand, significand_mask,
+             typemax, typemin, uinttype, unsafe_trunc
 
-using Base: llvmcall, uniontypes
+using Base: bswap_int, llvmcall, uniontypes
 
 using Core: BuiltinInts
 
@@ -341,6 +341,11 @@ rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen12{Float128}}) =
 
 rand(rng::AbstractRNG, ::SamplerTrivial{CloseOpen01{T}}) where {T<:WBF} =
     rand(rng, CloseOpen12(T)) - one(T)
+
+
+# * misc
+
+bswap(x::WBF) = bswap_int(x)
 
 
 end # module

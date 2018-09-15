@@ -190,3 +190,11 @@ end
         @test u2 == exponent_one(T)
     end
 end
+
+@testset "misc" begin
+    for F = (Float80, Float128)
+        x = _rand(F)
+        @test bswap(x) !== x
+        @test bswap(bswap(x)) === x
+    end
+end
