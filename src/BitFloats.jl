@@ -7,8 +7,8 @@ export Float80,  Inf80,  NaN80,
 
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             issubnormal, ldexp, nextfloat, precision, promote_rule, reinterpret, rem, round,
-             show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
+             issubnormal, ldexp, log2, nextfloat, precision, promote_rule, reinterpret, rem,
+             round, show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
              uinttype, unsafe_trunc
 
 import Base.Math: exponent_raw_max
@@ -589,6 +589,15 @@ for (F, f, i, fn) = llvmvars
          $"""
          %x = bitcast $i %0 to $f
          %y = call $f @llvm.fabs.$fn($f %x)
+         %z = bitcast $f %y to $i
+         ret $i %z
+         """), $F, Tuple{$F}, x)
+
+    @eval log2(x::$F) = llvmcall(
+        ($"""declare $f  @llvm.log2.$fn($f %Val)""",
+         $"""
+         %x = bitcast $i %0 to $f
+         %y = call $f @llvm.log2.$fn($f %x)
          %z = bitcast $f %y to $i
          ret $i %z
          """), $F, Tuple{$F}, x)

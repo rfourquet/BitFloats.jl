@@ -255,6 +255,8 @@ end
         @test abs(T(1)) == T(1)
         @test T(2)^3 == 8
         @test T(2)^-1.0 == 0.5
+        T == Float128 && continue
+        @test log2(T(16)) == 4
     end
 end
 
