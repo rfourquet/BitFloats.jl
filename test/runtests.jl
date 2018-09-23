@@ -261,6 +261,11 @@ end
         @test exp2(T(10)) == 1024
         @test sqrt(T(16)) == 4
         @test sqrt(T(25)) == 5
+        # ≈ because this is not exact with Float128, due to intermediate conversion to BigFloat
+        @test sin(T(big(pi)/2)) ≈ 1.0
+        @test sin(T(-big(pi)/2)) ≈ -1.0
+        @test cos(T(big(pi))) ≈ -1.0
+        @test cos(T(0)) ≈ 1.0
     end
 end
 
