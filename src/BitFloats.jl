@@ -5,11 +5,11 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, cos, decompose, eps, exp2, exponent,
-             exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
-             issubnormal, ldexp, log2, nextfloat, precision, promote_rule, reinterpret, rem,
-             round, show, sign_mask, significand, significand_mask, sin, sqrt, trunc,
-             typemax, typemin, uinttype, unsafe_trunc
+import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, cos, decompose, eps, exp, exp2,
+             exponent, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
+             isequal, isless, issubnormal, ldexp, log, log10, log2, nextfloat, precision,
+             promote_rule, reinterpret, rem, round, show, sign_mask, significand,
+             significand_mask, sin, sqrt, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 import Base.Math: exponent_bits, exponent_raw_max, significand_bits
 
@@ -584,8 +584,8 @@ for (F, f, i, fn) = llvmvars
             """, $F, Tuple{$F,$F}, x, y)
     end
     for (op, fop) = (:abs => :fabs, :log2 => :log2, :exp2 => :exp2, :sqrt => :sqrt,
-                     :sin => :sin, :cos => :cos)
-        if F === Float128 && op ∈ (:log2, :exp2, :sqrt, :sin, :cos)
+                     :sin => :sin, :cos => :cos, :exp => :exp, :log => :log, :log10 => :log10)
+        if F === Float128 && op ∈ (:log2, :exp2, :sqrt, :sin, :cos, :exp, :log, :log10)
             @eval $op(x::$F) = $F($op(big(x)))
         else
             @eval $op(x::$F) = llvmcall(
