@@ -11,7 +11,7 @@ import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
              round, show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
              uinttype, unsafe_trunc
 
-import Base.Math: exponent_raw_max
+import Base.Math: exponent_bits, exponent_raw_max, significand_bits
 
 using Base: bswap_int, llvmcall, uniontypes
 
