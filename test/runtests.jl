@@ -255,9 +255,12 @@ end
         @test abs(T(1)) == T(1)
         @test T(2)^3 == 8
         @test T(2)^-1.0 == 0.5
-        T == Float128 && continue
+        # LLVM intrinsics only called for Float80, otherwise conversion to BigFloat
         @test log2(T(16)) == 4
+        @test log2(T(32)) == 5
         @test exp2(T(10)) == 1024
+        @test sqrt(T(16)) == 4
+        @test sqrt(T(25)) == 5
     end
 end
 

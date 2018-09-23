@@ -8,8 +8,8 @@ export Float80,  Inf80,  NaN80,
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exp2, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
              issubnormal, ldexp, log2, nextfloat, precision, promote_rule, reinterpret, rem,
-             round, show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
-             uinttype, unsafe_trunc
+             round, show, sign_mask, significand, significand_mask, sqrt, trunc, typemax,
+             typemin, uinttype, unsafe_trunc
 
 import Base.Math: exponent_bits, exponent_raw_max, significand_bits
 
@@ -583,8 +583,8 @@ for (F, f, i, fn) = llvmvars
             ret $i %mi
             """, $F, Tuple{$F,$F}, x, y)
     end
-    for (op, fop) = (:abs => :fabs, :log2 => :log2, :exp2 => :exp2)
-        if F === Float128 && op ∈ (:log2, :exp2)
+    for (op, fop) = (:abs => :fabs, :log2 => :log2, :exp2 => :exp2, :sqrt => :sqrt)
+        if F === Float128 && op ∈ (:log2, :exp2, :sqrt)
             @eval $op(x::$F) = $F($op(big(x)))
         else
             @eval $op(x::$F) = llvmcall(
