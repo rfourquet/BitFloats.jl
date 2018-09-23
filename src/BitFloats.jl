@@ -5,7 +5,7 @@ module BitFloats
 export Float80,  Inf80,  NaN80,
        Float128, Inf128, NaN128
 
-import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exponent,
+import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, decompose, eps, exp2, exponent,
              exponent_half, exponent_mask, exponent_one, floatmax, floatmin, isequal, isless,
              issubnormal, ldexp, log2, nextfloat, precision, promote_rule, reinterpret, rem,
              round, show, sign_mask, significand, significand_mask, trunc, typemax, typemin,
@@ -583,25 +583,20 @@ for (F, f, i, fn) = llvmvars
             ret $i %mi
             """, $F, Tuple{$F,$F}, x, y)
     end
-
-    @eval abs(x::$F) = llvmcall(
-        ($"""declare $f  @llvm.fabs.$fn($f %Val)""",
-         $"""
-         %x = bitcast $i %0 to $f
-         %y = call $f @llvm.fabs.$fn($f %x)
-         %z = bitcast $f %y to $i
-         ret $i %z
-         """), $F, Tuple{$F}, x)
-
-    @eval log2(x::$F) = llvmcall(
-        ($"""declare $f  @llvm.log2.$fn($f %Val)""",
-         $"""
-         %x = bitcast $i %0 to $f
-         %y = call $f @llvm.log2.$fn($f %x)
-         %z = bitcast $f %y to $i
-         ret $i %z
-         """), $F, Tuple{$F}, x)
-
+    for (op, fop) = (:abs => :fabs, :log2 => :log2, :exp2 => :exp2)
+        if F === Float128 && op ∈ (:log2, :exp2)
+            @eval $op(x::$F) = $F($op(big(x)))
+        else
+            @eval $op(x::$F) = llvmcall(
+                ($"""declare $f  @llvm.$fop.$fn($f %Val)""",
+                 $"""
+                 %x = bitcast $i %0 to $f
+                 %y = call $f @llvm.$fop.$fn($f %x)
+                 %z = bitcast $f %y to $i
+                 ret $i %z
+                 """), $F, Tuple{$F}, x)
+        end
+    end
     F == Float128 && continue # broken
     @eval ^(x::$F, y::$F) = llvmcall(
         ($"""declare $f @llvm.pow.$fn($f %Val, $f %Power)""",

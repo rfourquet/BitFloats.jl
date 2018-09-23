@@ -257,6 +257,7 @@ end
         @test T(2)^-1.0 == 0.5
         T == Float128 && continue
         @test log2(T(16)) == 4
+        @test exp2(T(10)) == 1024
     end
 end
 
