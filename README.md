@@ -10,6 +10,8 @@ This is very experimental:
   the most simple arithmetic, so conversion to/from `BigFloat` is done before/after computation;
 + conversions to/from other types is mostly done without consideration for rounding modes;
 + there can be unexpected segfaults;
++ this is tested only on Linux; some tests pass on MacOS, but I don't have a machine at hand
+  to check what doesn't work;
 + this uses the [BitIntegers.jl](https://github.com/rfourquet/BitIntegers.jl) package,
   so the problem of slow REPL experience after `using BitFloats` carries over here;
 + arrays of `Float80` are prone to segfaults.
