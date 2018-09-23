@@ -76,10 +76,10 @@ typemin( ::Type{Float128}) = -Inf128
 typemax( ::Type{Float128}) =  Inf128
 
 const Inf80 = reinterpret(Float80,   0x7fff_8000_0000_0000_0000 % UInt80)
-const NaN80 = reinterpret(Float80,   0xffff_c000_0000_0000_0000 % UInt80)
+const NaN80 = reinterpret(Float80,   0x7fff_c000_0000_0000_0000 % UInt80)
 
 const Inf128 = reinterpret(Float128, 0x7fff_0000_0000_0000_0000_0000_0000_0000)
-const NaN128 = reinterpret(Float128, 0xffff_8000_0000_0000_0000_0000_0000_0000)
+const NaN128 = reinterpret(Float128, 0x7fff_8000_0000_0000_0000_0000_0000_0000)
 
 precision(::Type{Float80})  = 64
 precision(::Type{Float128}) = 113
