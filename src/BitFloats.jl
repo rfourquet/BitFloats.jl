@@ -406,21 +406,20 @@ end
 
 # ** BigFloat
 
-function (::Type{BigFloat})(x::WBF)
+function (::Type{BigFloat})(x::WBF; precision::Integer=Base.MPFR.DEFAULT_PRECISION[])
     if isnan(x)
-        BigFloat(NaN)
+        BigFloat(NaN, precision=precision)
     elseif isinf(x)
-        BigFloat(x < 0 ? -Inf : Inf)
+        BigFloat(x < 0 ? -Inf : Inf, precision=precision)
     elseif iszero(x)
-        BigFloat(x < 0 ? -0.0 : 0.0)
+        BigFloat(x < 0 ? -0.0 : 0.0, precision=precision)
     else
-        z = BigFloat()
+        z = BigFloat(precision=precision)
         z.exp = exponent(x) + 1
         z.sign = x >= zero(x) ? 1 : -1
         y = significand(x)
-        prec = precision(BigFloat)
-        nlimbs = div(prec + BITS_PER_LIMB-1, BITS_PER_LIMB)
-        mask = ~(Limb(0)) << mod(BITS_PER_LIMB - prec, BITS_PER_LIMB)
+        nlimbs = div(precision + BITS_PER_LIMB-1, BITS_PER_LIMB)
+        mask = ~(Limb(0)) << mod(BITS_PER_LIMB - precision, BITS_PER_LIMB)
 
         if x isa Float80
             u = reinterpret(Unsigned, y) % UInt64
@@ -658,7 +657,7 @@ show(io::IO, x::WBF) =
     elseif isinf(x)
         print(io, x > 0 ? "" : '-',  "Inf", sizeof(x)*8)
     else
-        show(io, BigFloat(x, precision(x)))
+        show(io, BigFloat(x, precision=precision(x)))
     end
 
 

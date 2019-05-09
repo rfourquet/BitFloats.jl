@@ -309,5 +309,7 @@ end
         x = _rand(F)
         @test bswap(x) !== x
         @test bswap(bswap(x)) === x
+
+        @test "$(F(12))" == "12.0"
     end
 end
