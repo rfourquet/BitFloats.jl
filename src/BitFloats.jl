@@ -545,7 +545,7 @@ for (F, f, i) = llvmvars
         %yf = bitcast $i %1 to $f
         %c11 = fcmp ord $f %xf, %xf ; !isnan(xf)
         %c12 = fcmp uno $f %yf, %yf ; isnan(yf)
-        %c1  = or i1 %c11, %c12
+        %c1  = and i1 %c11, %c12
         %c21 = fcmp ord $f %xf, %yf ; !(isnan(xf) | isnan(yf))
         %c2211 = icmp sge $i %0, 0 ; xi >= 0
         %c2212 = icmp slt $i %0, %1 ; xi < yi

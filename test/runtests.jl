@@ -226,11 +226,21 @@ end
         @test !(F(1) != F(1))
         @test isequal(x, x)
         @test isequal(y, y)
-        @test isequal(x, y) || isless(x, y) || isless(y, x)
+        @test 1 == count((isequal(x, y), isless(x, y), isless(y, x)))
         N = F(NaN)
         @test N != N
         @test isequal(N, N)
         @test !(N == N)
+
+        if F != Float80 || VERSION >= v"1.4.0-DEV.225" # Julia's #33283
+            A64 = rand(Float64, rand(1:10))
+            AF  = F.(A64)
+            @test issorted(A64) == issorted(AF)
+            S1 = sort(AF)
+            S2 = F.(sort(A64))
+            @test issorted(S1)
+            @test isequal(S1, S2)
+        end
     end
 end
 
