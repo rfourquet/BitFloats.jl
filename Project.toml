@@ -1,6 +1,6 @@
 authors = ["Rafael Fourquet <fourquet.rafael@gmail.com>"]
-name = "BitFloats"
-uuid = "15425d4b-8de4-5414-94ee-c672bedd8b29"
+name    = "BitFloats"
+uuid    = "15425d4b-8de4-5414-94ee-c672bedd8b29"
 version = "0.0.2"
 
 [deps]
@@ -14,4 +14,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 test = ["Test"]
 
 [compat]
-julia = "≥ 1.1.0"
+julia       = "1.1.0"
+BitIntegers = "0.2.1"
