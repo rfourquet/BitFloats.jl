@@ -8,7 +8,7 @@ export Float80,  Inf80,  NaN80,
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, cos, decompose, eps, exp, exp2,
              exponent, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
              isequal, isless, issubnormal, ldexp, log, log10, log2, nextfloat, precision,
-             promote_rule, reinterpret, rem, round, show, sign_mask, significand,
+             promote_rule, read, reinterpret, rem, round, show, sign_mask, significand,
              significand_mask, sin, sqrt, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 import Base.Math: exponent_bits, exponent_raw_max, significand_bits
@@ -671,5 +671,9 @@ show(io::IO, x::WBF) =
         show(io, BigFloat(x, precision=precision(x)))
     end
 
+# read from IOStream
+# assuming that Float80 are stored as padded 16-bit variables
+read(s::IOStream, T::Type{Float80})  = reinterpret(Float80, read(s, UInt128) % UInt80)
+read(s::IOStream, T::Type{Float128}) = reinterpret(Float128, read(s, UInt128))
 
 end # module
