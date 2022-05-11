@@ -8,7 +8,7 @@ export Float80,  Inf80,  NaN80,
 import Base: !=, *, +, -, /, <, <=, ==, ^, abs, bswap, cos, decompose, eps, exp, exp2,
              exponent, exponent_half, exponent_mask, exponent_one, floatmax, floatmin,
              isequal, isless, issubnormal, ldexp, log, log10, log2, nextfloat, precision,
-             promote_rule, reinterpret, rem, round, show, sign_mask, significand,
+             promote_rule, read, reinterpret, rem, round, show, sign_mask, significand,
              significand_mask, sin, sqrt, trunc, typemax, typemin, uinttype, unsafe_trunc
 
 import Base.Math: exponent_bits, exponent_raw_max, significand_bits
@@ -509,13 +509,16 @@ for (F, f, i, fn) = llvmvars
                            (:Up, :ceil), (:Nearest, :rint))
         fun = "@llvm.$llvmfun.$fn"
         @eval round(x::$F, r::$(RoundingMode{mode})) = llvmcall(
-            ($"""declare $f $fun($f %Val)""",
-             $"""
-             %x = bitcast $i %0 to $f
-             %y = call $f $fun($f %x)
-             %z = bitcast $f %y to $i
-             ret $i %z
-             """), $F, Tuple{$F}, x)
+            ($"""declare $f $fun($f %Val)
+                 define $i @entry($i) #0 {
+                 1:
+                     %x = bitcast $i %0 to $f
+                     %y = call $f $fun($f %x)
+                     %z = bitcast $f %y to $i
+                     ret $i %z
+                 }
+                 attributes #0 = { alwaysinline }
+             """, "entry"), $F, Tuple{$F}, x)
     end
 end
 
@@ -572,6 +575,7 @@ isequal(x::T, y::T) where {T<:WBF} =
 # * arithmetic
 
 for (F, f, i, fn) = llvmvars
+    # simple binary-operators
     for (op, fop) = ((:*, :fmul), (:/, :fdiv), (:+, :fadd), (:-, :fsub), (:rem, :frem))
         @eval $op(x::$F, y::$F) = llvmcall(
             $"""
@@ -582,34 +586,41 @@ for (F, f, i, fn) = llvmvars
             ret $i %mi
             """, $F, Tuple{$F,$F}, x, y)
     end
+    # simple unary-functions
     for (op, fop) = (:abs => :fabs, :log2 => :log2, :exp2 => :exp2, :sqrt => :sqrt,
                      :sin => :sin, :cos => :cos, :exp => :exp, :log => :log, :log10 => :log10)
-        if F === Float128 && op ∈ (:log2, :exp2, :sqrt, :sin, :cos, :exp, :log, :log10)
-            @eval $op(x::$F) = $F($op(big(x)))
-        else
+        # if F === Float128 && op ∈ (:log2, :exp2, :sqrt, :sin, :cos, :exp, :log, :log10)
+        #     @eval $op(x::$F) = $F($op(big(x)))
+        # else
             @eval $op(x::$F) = llvmcall(
-                ($"""declare $f  @llvm.$fop.$fn($f %Val)""",
-                 $"""
-                 %x = bitcast $i %0 to $f
-                 %y = call $f @llvm.$fop.$fn($f %x)
-                 %z = bitcast $f %y to $i
-                 ret $i %z
-                 """), $F, Tuple{$F}, x)
-        end
+                ($"""declare $f  @llvm.$fop.$fn($f)
+                     define $i @entry($i) #0 {
+                     1:
+                         %x = bitcast $i %0 to $f
+                         %y = call $f @llvm.$fop.$fn($f %x)
+                         %z = bitcast $f %y to $i
+                         ret $i %z
+                     }
+                     attributes #0 = { alwaysinline }
+                 """, "entry"), $F, Tuple{$F}, x)
+        # end
     end
-    F == Float128 && continue # broken
-    @eval ^(x::$F, y::$F) = llvmcall(
-        ($"""declare $f @llvm.pow.$fn($f %Val, $f %Power)""",
-         $"""
-         %x = bitcast $i %0 to $f
-         %y = bitcast $i %1 to $f
-         %m = call $f @llvm.pow.$fn($f %x, $f %y)
-         %mi = bitcast $f %m to $i
-         ret $i %mi
-         """), $F, Tuple{$F,$F}, x, y)
+    # binary-functions
+    for (op, fop) = ((:^,:pow),)
+        @eval $op(x::$F, y::$F) = llvmcall(
+            ($"""declare $f  @llvm.$fop.$fn($f, $f)
+                 define $i @entry($i, $i) #0 {
+                 2:
+                     %x = bitcast $i %0 to $f
+                     %y = bitcast $i %1 to $f
+                     %m = call $f @llvm.$fop.$fn($f %x, $f %y)
+                     %mi = bitcast $f %m to $i
+                     ret $i %mi
+                 }
+                 attributes #0 = { alwaysinline }
+             """, "entry"), $F, Tuple{$F,$F}, x,y)
+    end
 end
-
-^(x::Float128, y::Float128) = Float128(big(x)^big(y))
 
 ^(x::WBF, n::Integer) = x^(oftype(x, n))
 -(x::F) where {F<:WBF} = F(-0.0) - x
@@ -660,5 +671,9 @@ show(io::IO, x::WBF) =
         show(io, BigFloat(x, precision=precision(x)))
     end
 
+# read from IOStream
+# assuming that Float80 are stored as padded 16-bit variables
+read(s::IOStream, T::Type{Float80})  = reinterpret(Float80, read(s, UInt128) % UInt80)
+read(s::IOStream, T::Type{Float128}) = reinterpret(Float128, read(s, UInt128))
 
 end # module
